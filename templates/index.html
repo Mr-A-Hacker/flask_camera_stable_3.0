@@ -1,311 +1,862 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Camera Dashboard</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SecureView — Camera Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    <style>
-        body {
-            margin: 0;
-            background: #111;
-            color: #eee;
-            font-family: Arial, sans-serif;
-            text-align: center;
-        }
+    :root {
+      --bg:        #080c10;
+      --surface:   #0d1117;
+      --panel:     #111820;
+      --border:    #1e2d3d;
+      --border2:   #263547;
+      --accent:    #00d4ff;
+      --accent2:   #00ff88;
+      --danger:    #ff3a3a;
+      --warn:      #ffaa00;
+      --muted:     #4a6070;
+      --text:      #cce8f0;
+      --text-dim:  #6b8fa0;
+      --font-mono: 'Share Tech Mono', monospace;
+      --font-ui:   'Exo 2', sans-serif;
+    }
 
-        #video-wrapper {
-            position: relative;
-            display: inline-block;
-            margin-top: 20px;
-        }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-ui);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
 
-        /* FIXED SIZE TO MATCH BACKEND (960x540) */
-        #stream {
-            width: 960px;
-            height: 540px;
-            border: 2px solid #333;
-            border-radius: 6px;
-        }
+    /* ── SCANLINE OVERLAY ── */
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.07) 2px,
+        rgba(0,0,0,0.07) 4px
+      );
+      pointer-events: none;
+      z-index: 9999;
+    }
 
-        #boxCanvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            z-index: 20;
-            cursor: crosshair;
-            display: none;
-        }
+    /* ── HEADER ── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 28px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      position: relative;
+    }
 
-        .overlay-btn {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            background: rgba(0,0,0,0.6);
-            color: #fff;
-            padding: 8px 12px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            z-index: 30;
-        }
+    header::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    }
 
-        #settings-btn {
-            right: 60px;
-        }
+    .logo {
+      font-family: var(--font-mono);
+      font-size: 1.3rem;
+      color: var(--accent);
+      letter-spacing: 3px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
 
-        #settings-panel {
-            position: absolute;
-            top: 60px;
-            right: 20px;
-            width: 260px;
-            background: #1c1c1c;
-            border: 1px solid #333;
-            padding: 15px;
-            display: none;
-            border-radius: 6px;
-            z-index: 40;
-        }
+    .logo-dot {
+      width: 10px; height: 10px;
+      background: var(--accent2);
+      border-radius: 50%;
+      animation: pulse 1.8s ease-in-out infinite;
+    }
 
-        .settings-btn {
-            width: 100%;
-            padding: 10px;
-            margin-top: 8px;
-            background: #333;
-            border: none;
-            color: #fff;
-            cursor: pointer;
-            border-radius: 4px;
-        }
+    @keyframes pulse {
+      0%,100% { opacity: 1; box-shadow: 0 0 0 0 rgba(0,255,136,0.5); }
+      50%      { opacity: 0.5; box-shadow: 0 0 0 6px rgba(0,255,136,0); }
+    }
 
-        .settings-btn:hover {
-            background: #444;
-        }
+    .header-meta {
+      display: flex;
+      gap: 24px;
+      align-items: center;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: var(--text-dim);
+    }
 
-        /* Alarm Popup */
-        #alarm-popup {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: #222;
-            padding: 20px;
-            border: 2px solid #444;
-            border-radius: 8px;
-            display: none;
-            z-index: 999;
-            color: white;
-            width: 300px;
-            text-align: center;
-        }
+    .stat-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+    }
 
-        #alarm-list {
-            max-height: 200px;
-            overflow-y: auto;
-            margin-top: 10px;
-        }
+    .stat-pill .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--muted);
+    }
 
-        .alarm-btn {
-            width: 100%;
-            padding: 10px;
-            margin-top: 6px;
-            background: #333;
-            border: none;
-            color: white;
-            border-radius: 4px;
-            cursor: pointer;
-        }
+    .stat-pill.online .dot  { background: var(--accent2); animation: pulse 1.5s infinite; }
+    .stat-pill.alarm  .dot  { background: var(--danger); animation: pulse 0.6s infinite; }
 
-        .alarm-btn:hover {
-            background: #444;
-        }
+    /* ── MAIN LAYOUT ── */
+    .dashboard {
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      grid-template-rows: auto 1fr;
+      gap: 0;
+      height: calc(100vh - 57px);
+    }
 
-        #close-alarm-popup {
-            margin-top: 10px;
-            padding: 8px 12px;
-            background: #444;
-            border: none;
-            color: white;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-    </style>
+    /* ── VIDEO PANEL ── */
+    .video-panel {
+      position: relative;
+      background: #000;
+      overflow: hidden;
+      border-right: 1px solid var(--border);
+    }
+
+    #stream {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    #boxCanvas {
+      position: absolute;
+      inset: 0;
+      z-index: 20;
+      cursor: crosshair;
+      display: none;
+    }
+
+    /* Corner frame decoration */
+    .cam-corner {
+      position: absolute;
+      width: 22px; height: 22px;
+      border-color: var(--accent);
+      border-style: solid;
+      z-index: 10;
+      opacity: 0.6;
+    }
+    .cam-corner.tl { top:10px; left:10px;  border-width: 2px 0 0 2px; }
+    .cam-corner.tr { top:10px; right:10px; border-width: 2px 2px 0 0; }
+    .cam-corner.bl { bottom:10px; left:10px;  border-width: 0 0 2px 2px; }
+    .cam-corner.br { bottom:10px; right:10px; border-width: 0 2px 2px 0; }
+
+    /* REC badge */
+    .rec-badge {
+      position: absolute;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      background: rgba(0,0,0,0.65);
+      border: 1px solid rgba(255,58,58,0.4);
+      border-radius: 4px;
+      padding: 4px 12px;
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--danger);
+      letter-spacing: 2px;
+      z-index: 10;
+    }
+
+    .rec-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--danger);
+      animation: pulse 1s infinite;
+    }
+
+    /* Floating toolbar */
+    .cam-toolbar {
+      position: absolute;
+      bottom: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      background: rgba(8,12,16,0.85);
+      border: 1px solid var(--border2);
+      border-radius: 8px;
+      padding: 8px 16px;
+      z-index: 30;
+      backdrop-filter: blur(8px);
+    }
+
+    .cam-btn {
+      background: var(--panel);
+      border: 1px solid var(--border2);
+      color: var(--text);
+      padding: 7px 14px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      letter-spacing: 1px;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+
+    .cam-btn:hover {
+      background: var(--border2);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .cam-btn.active {
+      background: rgba(0,212,255,0.12);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .cam-btn.danger { border-color: rgba(255,58,58,0.4); color: var(--danger); }
+    .cam-btn.danger:hover { background: rgba(255,58,58,0.1); border-color: var(--danger); }
+    .cam-btn.danger.active { background: rgba(255,58,58,0.15); }
+
+    .cam-btn.success { color: var(--accent2); }
+    .cam-btn.success:hover,
+    .cam-btn.success.active { background: rgba(0,255,136,0.1); border-color: var(--accent2); }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      background: var(--surface);
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    .sidebar::-webkit-scrollbar { width: 4px; }
+    .sidebar::-webkit-scrollbar-track { background: var(--surface); }
+    .sidebar::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+    .sidebar-section {
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section-label {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── STAT GRID ── */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .stat-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 12px 10px;
+    }
+
+    .stat-card .s-label {
+      font-family: var(--font-mono);
+      font-size: 0.62rem;
+      color: var(--text-dim);
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+
+    .stat-card .s-value {
+      font-family: var(--font-mono);
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--accent);
+      line-height: 1;
+    }
+
+    .stat-card .s-value.green { color: var(--accent2); }
+    .stat-card .s-value.warn  { color: var(--warn); }
+    .stat-card .s-value.red   { color: var(--danger); }
+
+    /* ── TOGGLE ROWS ── */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.82rem;
+      color: var(--text);
+    }
+
+    .toggle-row:last-child { border-bottom: none; }
+
+    .toggle-row .t-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.82rem;
+    }
+
+    .toggle {
+      position: relative;
+      width: 36px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+
+    .toggle input { opacity: 0; width: 0; height: 0; }
+
+    .toggle-track {
+      position: absolute;
+      inset: 0;
+      background: var(--border2);
+      border-radius: 20px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .toggle-track::before {
+      content: '';
+      position: absolute;
+      width: 14px; height: 14px;
+      left: 3px; top: 3px;
+      background: var(--muted);
+      border-radius: 50%;
+      transition: all 0.2s;
+    }
+
+    .toggle input:checked + .toggle-track { background: rgba(0,212,255,0.25); }
+    .toggle input:checked + .toggle-track::before {
+      transform: translateX(16px);
+      background: var(--accent);
+    }
+
+    /* ── DETECTION LOG ── */
+    .log-list {
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .log-list::-webkit-scrollbar { width: 3px; }
+    .log-list::-webkit-scrollbar-thumb { background: var(--border2); }
+
+    .log-entry {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      animation: fadeIn 0.3s ease;
+    }
+
+    .log-entry:last-child { border-bottom: none; }
+
+    .log-entry .le-time { color: var(--accent); min-width: 56px; }
+    .log-entry .le-icon { font-size: 0.9rem; }
+
+    @keyframes fadeIn { from { opacity:0; transform: translateX(8px); } to { opacity:1; transform: none; } }
+
+    .log-empty {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-align: center;
+      padding: 16px 0;
+    }
+
+    /* ── ALARM SELECTOR ── */
+    .alarm-select-wrap {
+      position: relative;
+    }
+
+    .alarm-select {
+      width: 100%;
+      background: var(--panel);
+      border: 1px solid var(--border2);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 5px;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      appearance: none;
+      cursor: pointer;
+      outline: none;
+    }
+
+    .alarm-select:focus { border-color: var(--accent); }
+
+    /* ── MODAL (draw box) ── */
+    .draw-hint {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(8,12,16,0.85);
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      padding: 14px 22px;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--accent);
+      letter-spacing: 1px;
+      z-index: 25;
+      pointer-events: none;
+      text-align: center;
+    }
+
+    /* ── ALARM FLASH ── */
+    .alarm-flash {
+      display: none;
+      position: fixed;
+      inset: 0;
+      border: 4px solid var(--danger);
+      z-index: 9000;
+      pointer-events: none;
+      animation: flashBorder 0.4s ease-in-out infinite alternate;
+    }
+
+    @keyframes flashBorder {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .dashboard { grid-template-columns: 1fr; grid-template-rows: 50vh auto; }
+      .sidebar   { max-height: 50vh; }
+    }
+  </style>
 </head>
 <body>
 
-<div id="video-wrapper">
-    <img id="stream" src="/video">
+<header>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    SECUREVIEW
+  </div>
+  <div class="header-meta">
+    <div class="stat-pill" id="conn-pill">
+      <div class="dot"></div>
+      <span id="conn-label">CONNECTING</span>
+    </div>
+    <div class="stat-pill">
+      <span id="header-time" style="color:var(--text)"></span>
+    </div>
+    <div class="stat-pill" id="res-pill">
+      <span>1280×720</span>
+    </div>
+  </div>
+</header>
+
+<div class="dashboard">
+
+  <!-- ── VIDEO ── -->
+  <div class="video-panel" id="video-panel">
+    <img id="stream" src="/video" alt="camera feed">
     <canvas id="boxCanvas"></canvas>
 
-    <button id="settings-btn" class="overlay-btn" onclick="toggleSettings()">⚙</button>
-    <button id="fullscreen-btn" class="overlay-btn" onclick="toggleFullscreen()">⛶</button>
+    <div class="cam-corner tl"></div>
+    <div class="cam-corner tr"></div>
+    <div class="cam-corner bl"></div>
+    <div class="cam-corner br"></div>
 
-    <div id="settings-panel">
-        <h3>Settings</h3>
+    <div class="rec-badge"><div class="rec-dot"></div>LIVE</div>
 
-        <!-- Alarm Box Controls -->
-        <button class="settings-btn" onclick="startBoxDrawing()">Draw Alarm Box</button>
-        <button class="settings-btn" onclick="toggleAlarmBox()">Toggle Alarm Box</button>
-        <button class="settings-btn" onclick="toggleAlarmBoxVisibility()">Show/Hide Alarm Box</button>
+    <div class="draw-hint" id="draw-hint">CLICK & DRAG TO SET WATCH ZONE</div>
 
-        <!-- YOLO Controls -->
-        <button class="settings-btn" onclick="toggleYoloBoxes()">Show/Hide YOLO Boxes</button>
-        <button class="settings-btn" onclick="toggleMovement()">Toggle Movement Detection</button>
-
-        <!-- Alarm Sound -->
-        <button class="settings-btn" onclick="chooseAlarm()">Choose Alarm Sound</button>
+    <div class="cam-toolbar">
+      <button class="cam-btn" onclick="startBoxDrawing()" title="Draw watch zone">⬚ ZONE</button>
+      <button class="cam-btn danger" id="btn-alarm"  onclick="toggleAlarmBox()">🔔 ALARM OFF</button>
+      <button class="cam-btn"        id="btn-motion" onclick="toggleMovement()">👁 MOTION ON</button>
+      <button class="cam-btn"        id="btn-boxes"  onclick="toggleYoloBoxes()">📦 BOXES ON</button>
+      <button class="cam-btn"        id="btn-zone"   onclick="toggleAlarmBoxVisibility()">👁 ZONE ON</button>
+      <button class="cam-btn success" onclick="takeSnapshot()" title="Save snapshot">📷 SNAP</button>
+      <button class="cam-btn" onclick="toggleFullscreen()">⛶ FULL</button>
     </div>
+  </div>
+
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar">
+
+    <!-- STATS -->
+    <div class="sidebar-section">
+      <div class="section-label">Live Stats</div>
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="s-label">FPS</div>
+          <div class="s-value" id="stat-fps">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="s-label">DETECTIONS</div>
+          <div class="s-value green" id="stat-det">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="s-label">LAST TRIGGER</div>
+          <div class="s-value warn" id="stat-last" style="font-size:0.85rem;padding-top:4px">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="s-label">STATUS</div>
+          <div class="s-value" id="stat-status" style="font-size:0.8rem;padding-top:4px">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONTROLS -->
+    <div class="sidebar-section">
+      <div class="section-label">Controls</div>
+
+      <div class="toggle-row">
+        <span class="t-label">🔔 Alarm Active</span>
+        <label class="toggle">
+          <input type="checkbox" id="tog-alarm" onchange="toggleAlarmBox()">
+          <div class="toggle-track"></div>
+        </label>
+      </div>
+      <div class="toggle-row">
+        <span class="t-label">👁 Motion Detection</span>
+        <label class="toggle">
+          <input type="checkbox" id="tog-motion" checked onchange="toggleMovement()">
+          <div class="toggle-track"></div>
+        </label>
+      </div>
+      <div class="toggle-row">
+        <span class="t-label">📦 YOLO Boxes</span>
+        <label class="toggle">
+          <input type="checkbox" id="tog-boxes" checked onchange="toggleYoloBoxes()">
+          <div class="toggle-track"></div>
+        </label>
+      </div>
+      <div class="toggle-row">
+        <span class="t-label">⬚ Show Zone</span>
+        <label class="toggle">
+          <input type="checkbox" id="tog-zone" checked onchange="toggleAlarmBoxVisibility()">
+          <div class="toggle-track"></div>
+        </label>
+      </div>
+    </div>
+
+    <!-- ALARM SOUND -->
+    <div class="sidebar-section">
+      <div class="section-label">Alarm Sound</div>
+      <div class="alarm-select-wrap">
+        <select class="alarm-select" id="alarm-select" onchange="setAlarm(this.value)">
+          <option value="">— Select sound —</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- DETECTION LOG -->
+    <div class="sidebar-section" style="flex:1">
+      <div class="section-label">Detection Log</div>
+      <div class="log-list" id="log-list">
+        <div class="log-empty">No detections yet</div>
+      </div>
+    </div>
+
+  </aside>
 </div>
 
-<!-- Alarm Selection Popup -->
-<div id="alarm-popup">
-    <h3>Select Alarm</h3>
-    <div id="alarm-list"></div>
-    <button id="close-alarm-popup" onclick="closeAlarmPopup()">Close</button>
-</div>
+<!-- Alarm flash border -->
+<div class="alarm-flash" id="alarm-flash"></div>
 
 <script>
-/* Ensure canvas always matches video */
-function resizeCanvasToVideo() {
-    const video = document.getElementById("stream");
-    boxCanvas.width = video.clientWidth;
-    boxCanvas.height = video.clientHeight;
+// ── Clock ──
+function updateClock() {
+  const now = new Date();
+  document.getElementById("header-time").textContent =
+    now.toLocaleTimeString("en-US", {hour12: false});
 }
-window.onload = resizeCanvasToVideo;
-window.onresize = resizeCanvasToVideo;
+setInterval(updateClock, 1000);
+updateClock();
 
-/* SETTINGS PANEL */
-function toggleSettings() {
-    const panel = document.getElementById("settings-panel");
-    panel.style.display = (panel.style.display === "block") ? "none" : "block";
+// ── Status polling ──
+let alarmEnabled  = false;
+let motionEnabled = true;
+let boxesEnabled  = true;
+let zoneVisible   = true;
+
+async function pollStatus() {
+  try {
+    const r = await fetch("/status");
+    const s = await r.json();
+
+    // Connection pill
+    const pill  = document.getElementById("conn-pill");
+    const label = document.getElementById("conn-label");
+    pill.className = "stat-pill " + (s.connected ? "online" : "");
+    label.textContent = s.connected ? "LIVE" : "OFFLINE";
+
+    // Stats
+    document.getElementById("stat-fps").textContent  = s.fps;
+    document.getElementById("stat-det").textContent  = s.detections_today;
+    document.getElementById("stat-last").textContent = s.last_trigger || "—";
+
+    const statusEl = document.getElementById("stat-status");
+    if (s.alarm_active) {
+      statusEl.textContent = "⚠ ALARM";
+      statusEl.className = "s-value red";
+      document.getElementById("alarm-flash").style.display = "block";
+    } else if (s.alarm_box_enabled) {
+      statusEl.textContent = "ARMED";
+      statusEl.className = "s-value warn";
+      document.getElementById("alarm-flash").style.display = "none";
+    } else {
+      statusEl.textContent = "STANDBY";
+      statusEl.className = "s-value";
+      document.getElementById("alarm-flash").style.display = "none";
+    }
+
+    // Sync toggle state (avoid loop)
+    alarmEnabled  = s.alarm_box_enabled;
+    motionEnabled = s.movement_detection_enabled;
+    boxesEnabled  = s.yolo_boxes_enabled;
+    zoneVisible   = s.show_alarm_box;
+
+    document.getElementById("tog-alarm").checked  = alarmEnabled;
+    document.getElementById("tog-motion").checked = motionEnabled;
+    document.getElementById("tog-boxes").checked  = boxesEnabled;
+    document.getElementById("tog-zone").checked   = zoneVisible;
+
+    // Toolbar button states
+    const ba = document.getElementById("btn-alarm");
+    ba.textContent = alarmEnabled ? "🔔 ALARM ON" : "🔔 ALARM OFF";
+    ba.className   = "cam-btn danger" + (alarmEnabled ? " active" : "");
+
+    document.getElementById("btn-motion").textContent = motionEnabled ? "👁 MOTION ON" : "👁 MOTION OFF";
+    document.getElementById("btn-boxes").textContent  = boxesEnabled  ? "📦 BOXES ON"  : "📦 BOXES OFF";
+    document.getElementById("btn-zone").textContent   = zoneVisible   ? "👁 ZONE ON"   : "👁 ZONE OFF";
+
+  } catch(e) {}
 }
 
-/* FULLSCREEN */
+setInterval(pollStatus, 2000);
+pollStatus();
+
+// ── Detection log ──
+async function pollLog() {
+  try {
+    const r = await fetch("/detection_log");
+    const entries = await r.json();
+    const list = document.getElementById("log-list");
+    if (!entries.length) {
+      list.innerHTML = '<div class="log-empty">No detections yet</div>';
+      return;
+    }
+    list.innerHTML = entries.slice(0, 20).map(e => `
+      <div class="log-entry">
+        <span class="le-icon">⚡</span>
+        <span class="le-time">${e.time}</span>
+        <span>${e.objects} ${e.type}</span>
+      </div>`).join("");
+  } catch(e) {}
+}
+
+setInterval(pollLog, 3000);
+
+// ── Load alarm sounds ──
+async function loadAlarms() {
+  try {
+    const r = await fetch("/list_alarms");
+    const files = await r.json();
+    const sel = document.getElementById("alarm-select");
+    files.forEach(f => {
+      const opt = document.createElement("option");
+      opt.value = f; opt.textContent = f;
+      sel.appendChild(opt);
+    });
+  } catch(e) {}
+}
+loadAlarms();
+
+async function setAlarm(filename) {
+  if (!filename) return;
+  await fetch("/set_alarm", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({filename})
+  });
+}
+
+// ── Toggles (just POST, state synced by pollStatus) ──
+async function toggleAlarmBox() {
+  await fetch("/toggle_alarm_box", {method:"POST"});
+  setTimeout(pollStatus, 200);
+}
+async function toggleMovement() {
+  await fetch("/toggle_movement_detection", {method:"POST"});
+  setTimeout(pollStatus, 200);
+}
+async function toggleYoloBoxes() {
+  await fetch("/toggle_yolo_boxes", {method:"POST"});
+  setTimeout(pollStatus, 200);
+}
+async function toggleAlarmBoxVisibility() {
+  await fetch("/toggle_box_visibility", {method:"POST"});
+  setTimeout(pollStatus, 200);
+}
+
+// ── Snapshot ──
+function takeSnapshot() {
+  const a = document.createElement("a");
+  a.href = "/snapshot";
+  a.click();
+}
+
+// ── Fullscreen ──
 function toggleFullscreen() {
-    const video = document.getElementById("stream");
-    if (!document.fullscreenElement) video.requestFullscreen();
-    else document.exitFullscreen();
+  const vp = document.getElementById("video-panel");
+  if (!document.fullscreenElement) vp.requestFullscreen();
+  else document.exitFullscreen();
 }
 
-/* DRAW BOX — AUTO‑SAVE VERSION */
+// ── Box drawing ──
+let drawing  = false;
 let boxStart = null;
-let boxEnd = null;
-let drawing = false;
+let boxEnd   = null;
 const boxCanvas = document.getElementById("boxCanvas");
-const boxCtx = boxCanvas.getContext("2d");
+const boxCtx    = boxCanvas.getContext("2d");
+
+function resizeCanvas() {
+  const vid = document.getElementById("stream");
+  boxCanvas.width  = vid.clientWidth;
+  boxCanvas.height = vid.clientHeight;
+}
+window.addEventListener("resize", resizeCanvas);
+window.addEventListener("load", resizeCanvas);
+setTimeout(resizeCanvas, 500);
 
 function startBoxDrawing() {
-    resizeCanvasToVideo();
-    boxCanvas.style.display = "block";
-    drawing = true;
-    boxStart = null;
-    boxEnd = null;
-    boxCtx.clearRect(0, 0, boxCanvas.width, boxCanvas.height);
+  resizeCanvas();
+  boxCanvas.style.display = "block";
+  document.getElementById("draw-hint").style.display = "block";
+  drawing  = true;
+  boxStart = null;
+  boxEnd   = null;
+  boxCtx.clearRect(0, 0, boxCanvas.width, boxCanvas.height);
 }
 
 boxCanvas.addEventListener("mousedown", e => {
-    if (!drawing) return;
-    const r = boxCanvas.getBoundingClientRect();
-    boxStart = { x: e.clientX - r.left, y: e.clientY - r.top };
+  if (!drawing) return;
+  const r = boxCanvas.getBoundingClientRect();
+  boxStart = {x: e.clientX - r.left, y: e.clientY - r.top};
+  document.getElementById("draw-hint").style.display = "none";
 });
 
 boxCanvas.addEventListener("mousemove", e => {
-    if (!drawing || !boxStart) return;
-    const r = boxCanvas.getBoundingClientRect();
-    boxEnd = { x: e.clientX - r.left, y: e.clientY - r.top };
+  if (!drawing || !boxStart) return;
+  const r = boxCanvas.getBoundingClientRect();
+  boxEnd = {x: e.clientX - r.left, y: e.clientY - r.top};
+  boxCtx.clearRect(0, 0, boxCanvas.width, boxCanvas.height);
 
-    boxCtx.clearRect(0, 0, boxCanvas.width, boxCanvas.height);
-    boxCtx.strokeStyle = "red";
-    boxCtx.lineWidth = 2;
-    boxCtx.strokeRect(
-        boxStart.x,
-        boxStart.y,
-        boxEnd.x - boxStart.x,
-        boxEnd.y - boxStart.y
-    );
+  const x = Math.min(boxStart.x, boxEnd.x);
+  const y = Math.min(boxStart.y, boxEnd.y);
+  const w = Math.abs(boxEnd.x - boxStart.x);
+  const h = Math.abs(boxEnd.y - boxStart.y);
+
+  // Fill
+  boxCtx.fillStyle = "rgba(0,212,255,0.05)";
+  boxCtx.fillRect(x, y, w, h);
+
+  // Dashed border
+  boxCtx.strokeStyle = "#00d4ff";
+  boxCtx.lineWidth   = 1.5;
+  boxCtx.setLineDash([6, 4]);
+  boxCtx.strokeRect(x, y, w, h);
+
+  // Corner dots
+  boxCtx.setLineDash([]);
+  boxCtx.fillStyle = "#00d4ff";
+  [[x,y],[x+w,y],[x,y+h],[x+w,y+h]].forEach(([cx,cy]) => {
+    boxCtx.beginPath();
+    boxCtx.arc(cx, cy, 4, 0, Math.PI*2);
+    boxCtx.fill();
+  });
+
+  // Label
+  boxCtx.fillStyle = "rgba(0,0,0,0.6)";
+  boxCtx.fillRect(x, y - 22, 90, 20);
+  boxCtx.fillStyle = "#00d4ff";
+  boxCtx.font = "11px 'Share Tech Mono',monospace";
+  boxCtx.fillText("WATCH ZONE", x + 4, y - 7);
 });
 
-/* AUTO‑SAVE ON MOUSE UP */
-boxCanvas.addEventListener("mouseup", e => {
-    if (!drawing || !boxStart || !boxEnd) return;
+boxCanvas.addEventListener("mouseup", async e => {
+  if (!drawing || !boxStart || !boxEnd) return;
+  const x1 = Math.min(boxStart.x, boxEnd.x);
+  const y1 = Math.min(boxStart.y, boxEnd.y);
+  const x2 = Math.max(boxStart.x, boxEnd.x);
+  const y2 = Math.max(boxStart.y, boxEnd.y);
 
-    const x1 = Math.min(boxStart.x, boxEnd.x);
-    const y1 = Math.min(boxStart.y, boxEnd.y);
-    const x2 = Math.max(boxStart.x, boxEnd.x);
-    const y2 = Math.max(boxStart.y, boxEnd.y);
+  await fetch("/save_box", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({box_norm:[
+      x1/boxCanvas.width, y1/boxCanvas.height,
+      x2/boxCanvas.width, y2/boxCanvas.height
+    ]})
+  });
 
-    // NORMALIZED COORDINATES
-    const nx1 = x1 / boxCanvas.width;
-    const ny1 = y1 / boxCanvas.height;
-    const nx2 = x2 / boxCanvas.width;
-    const ny2 = y2 / boxCanvas.height;
-
-    fetch("/save_box", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({ box_norm: [nx1, ny1, nx2, ny2] })
-    }).then(() => {
-        alert("Box saved");
-        boxCanvas.style.display = "none";
-        drawing = false;
-    });
+  boxCanvas.style.display = "none";
+  drawing = false;
 });
 
-/* BACKEND TOGGLES */
-function toggleAlarmBox() {
-    fetch("/toggle_alarm_box", { method: "POST" })
-        .then(r => r.json())
-        .then(data => alert("Alarm Box: " + (data.enabled ? "ON" : "OFF")));
-}
-
-function toggleAlarmBoxVisibility() {
-    fetch("/toggle_box_visibility", { method: "POST" })
-        .then(r => r.json())
-        .then(data => alert("Alarm Box Visible: " + data.visible));
-}
-
-function toggleYoloBoxes() {
-    fetch("/toggle_yolo_boxes", { method: "POST" })
-        .then(r => r.json())
-        .then(data => alert("YOLO Boxes: " + (data.enabled ? "ON" : "OFF")));
-}
-
-function toggleMovement() {
-    fetch("/toggle_movement_detection", { method: "POST" })
-        .then(r => r.json())
-        .then(data => alert("Movement Detection: " + (data.enabled ? "ON" : "OFF")));
-}
-
-/* ALARM POPUP */
-function chooseAlarm() {
-    fetch("/list_alarms")
-        .then(r => r.json())
-        .then(files => {
-            const listDiv = document.getElementById("alarm-list");
-            listDiv.innerHTML = "";
-
-            files.forEach(file => {
-                const btn = document.createElement("button");
-                btn.textContent = file;
-                btn.className = "alarm-btn";
-                btn.onclick = () => {
-                    fetch("/set_alarm", {
-                        method: "POST",
-                        headers: {"Content-Type": "application/json"},
-                        body: JSON.stringify({ filename: file })
-                    });
-                    closeAlarmPopup();
-                };
-                listDiv.appendChild(btn);
-            });
-
-            document.getElementById("alarm-popup").style.display = "block";
-        });
-}
-
-function closeAlarmPopup() {
-    document.getElementById("alarm-popup").style.display = "none";
-}
+// Touch support for mobile
+boxCanvas.addEventListener("touchstart", e => {
+  e.preventDefault();
+  const t = e.touches[0];
+  const r = boxCanvas.getBoundingClientRect();
+  const me = new MouseEvent("mousedown",{clientX:t.clientX,clientY:t.clientY});
+  boxCanvas.dispatchEvent(me);
+});
+boxCanvas.addEventListener("touchmove", e => {
+  e.preventDefault();
+  const t = e.touches[0];
+  const me = new MouseEvent("mousemove",{clientX:t.clientX,clientY:t.clientY});
+  boxCanvas.dispatchEvent(me);
+});
+boxCanvas.addEventListener("touchend", e => {
+  e.preventDefault();
+  const me = new MouseEvent("mouseup",{});
+  boxCanvas.dispatchEvent(me);
+});
 </script>
-
 </body>
 </html>
