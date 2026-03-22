@@ -4,134 +4,164 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SecureView — Camera Dashboard</title>
-  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&family=Bebas+Neue&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:        #080c10;
-      --surface:   #0d1117;
-      --panel:     #111820;
-      --border:    #1e2d3d;
-      --border2:   #263547;
-      --accent:    #00d4ff;
-      --accent2:   #00ff88;
-      --danger:    #ff3a3a;
-      --warn:      #ffaa00;
-      --muted:     #4a6070;
-      --text:      #cce8f0;
-      --text-dim:  #6b8fa0;
-      --font-mono: 'Share Tech Mono', monospace;
-      --font-ui:   'Exo 2', sans-serif;
+      --bg:         #0e0b08;
+      --surface:    #141008;
+      --panel:      #1a1308;
+      --panel2:     #211a0d;
+      --border:     #2e2210;
+      --border2:    #3d2f15;
+      --amber:      #e08c00;
+      --amber-hi:   #ffad00;
+      --amber-dim:  #7a4e00;
+      --amber-glow: rgba(224,140,0,0.15);
+      --red:        #c43a1a;
+      --red-hi:     #ff4d28;
+      --green:      #3a8c4a;
+      --green-hi:   #4db862;
+      --text:       #c8a96e;
+      --text-dim:   #6b5530;
+      --text-faint: #3d2e18;
+      --font-head:  'Bebas Neue', sans-serif;
+      --font-ui:    'Rajdhani', sans-serif;
+      --font-mono:  'IBM Plex Mono', monospace;
     }
+
+    html, body { height: 100%; }
 
     body {
       background: var(--bg);
       color: var(--text);
       font-family: var(--font-ui);
-      min-height: 100vh;
-      overflow-x: hidden;
+      font-size: 14px;
+      overflow: hidden;
+      height: 100vh;
     }
 
-    /* ── SCANLINE OVERLAY ── */
-    body::after {
+    /* Noise grain texture */
+    body::before {
       content: '';
       position: fixed; inset: 0;
-      background: repeating-linear-gradient(
-        0deg,
-        transparent,
-        transparent 2px,
-        rgba(0,0,0,0.07) 2px,
-        rgba(0,0,0,0.07) 4px
-      );
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
       pointer-events: none;
-      z-index: 9999;
+      z-index: 9998;
+      opacity: 0.6;
     }
 
-    /* ── HEADER ── */
+    /* ══ LAYOUT ══ */
+    .app {
+      display: grid;
+      grid-template-rows: 48px 1fr 44px;
+      grid-template-columns: 220px 1fr 240px;
+      height: 100vh;
+    }
+
+    /* ══ HEADER ══ */
     header {
+      grid-column: 1 / -1;
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      padding: 14px 28px;
+      padding: 0 20px;
       background: var(--surface);
-      border-bottom: 1px solid var(--border);
+      border-bottom: 1px solid var(--border2);
+      gap: 24px;
       position: relative;
+      z-index: 10;
     }
 
     header::after {
       content: '';
       position: absolute;
-      bottom: 0; left: 0; right: 0;
-      height: 1px;
-      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      bottom: -2px; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent 0%, var(--amber-dim) 20%, var(--amber) 50%, var(--amber-dim) 80%, transparent 100%);
     }
 
     .logo {
-      font-family: var(--font-mono);
-      font-size: 1.3rem;
-      color: var(--accent);
-      letter-spacing: 3px;
+      font-family: var(--font-head);
+      font-size: 1.6rem;
+      letter-spacing: 4px;
+      color: var(--amber-hi);
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .logo span {
+      color: var(--amber-dim);
+      font-size: 1.1rem;
+    }
+
+    .header-divider {
+      width: 1px;
+      height: 24px;
+      background: var(--border2);
+    }
+
+    .header-chips {
       display: flex;
       align-items: center;
       gap: 10px;
+      flex: 1;
     }
 
-    .logo-dot {
-      width: 10px; height: 10px;
-      background: var(--accent2);
-      border-radius: 50%;
-      animation: pulse 1.8s ease-in-out infinite;
-    }
-
-    @keyframes pulse {
-      0%,100% { opacity: 1; box-shadow: 0 0 0 0 rgba(0,255,136,0.5); }
-      50%      { opacity: 0.5; box-shadow: 0 0 0 6px rgba(0,255,136,0); }
-    }
-
-    .header-meta {
-      display: flex;
-      gap: 24px;
-      align-items: center;
-      font-family: var(--font-mono);
-      font-size: 0.78rem;
-      color: var(--text-dim);
-    }
-
-    .stat-pill {
+    .chip {
       display: flex;
       align-items: center;
       gap: 6px;
-      padding: 4px 12px;
-      border-radius: 4px;
-      border: 1px solid var(--border);
+      padding: 3px 10px;
+      border: 1px solid var(--border2);
+      border-radius: 2px;
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      color: var(--text-dim);
       background: var(--panel);
+      letter-spacing: 1px;
     }
 
-    .stat-pill .dot {
-      width: 6px; height: 6px;
+    .chip.live { border-color: var(--amber-dim); color: var(--amber); }
+    .chip.live .chip-dot { background: var(--amber); box-shadow: 0 0 6px var(--amber); animation: throb 1.4s ease-in-out infinite; }
+    .chip.offline .chip-dot { background: var(--red); }
+    .chip.armed { border-color: var(--red); color: var(--red-hi); }
+    .chip.recording-chip { border-color: var(--red); color: var(--red-hi); }
+    .chip.recording-chip .chip-dot { background: var(--red-hi); animation: throb 0.8s ease-in-out infinite; }
+
+    .chip-dot {
+      width: 5px; height: 5px;
       border-radius: 50%;
-      background: var(--muted);
+      background: var(--text-dim);
     }
 
-    .stat-pill.online .dot  { background: var(--accent2); animation: pulse 1.5s infinite; }
-    .stat-pill.alarm  .dot  { background: var(--danger); animation: pulse 0.6s infinite; }
-
-    /* ── MAIN LAYOUT ── */
-    .dashboard {
-      display: grid;
-      grid-template-columns: 1fr 300px;
-      grid-template-rows: auto 1fr;
-      gap: 0;
-      height: calc(100vh - 57px);
+    @keyframes throb {
+      0%,100% { opacity: 1; }
+      50% { opacity: 0.3; }
     }
 
-    /* ── VIDEO PANEL ── */
-    .video-panel {
-      position: relative;
-      background: #000;
-      overflow: hidden;
+    #header-clock {
+      margin-left: auto;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      color: var(--amber);
+      letter-spacing: 2px;
+    }
+
+    /* ══ LEFT PANEL ══ */
+    .left-panel {
+      background: var(--surface);
       border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ══ VIDEO PANEL ══ */
+    .video-panel {
+      background: #000;
+      position: relative;
+      overflow: hidden;
     }
 
     #stream {
@@ -149,520 +179,649 @@
       display: none;
     }
 
-    /* Corner frame decoration */
-    .cam-corner {
+    .draw-hint {
+      display: none;
       position: absolute;
-      width: 22px; height: 22px;
-      border-color: var(--accent);
-      border-style: solid;
-      z-index: 10;
-      opacity: 0.6;
-    }
-    .cam-corner.tl { top:10px; left:10px;  border-width: 2px 0 0 2px; }
-    .cam-corner.tr { top:10px; right:10px; border-width: 2px 2px 0 0; }
-    .cam-corner.bl { bottom:10px; left:10px;  border-width: 0 0 2px 2px; }
-    .cam-corner.br { bottom:10px; right:10px; border-width: 0 2px 2px 0; }
-
-    /* REC badge */
-    .rec-badge {
-      position: absolute;
-      top: 14px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      background: rgba(0,0,0,0.65);
-      border: 1px solid rgba(255,58,58,0.4);
-      border-radius: 4px;
-      padding: 4px 12px;
-      font-family: var(--font-mono);
-      font-size: 0.72rem;
-      color: var(--danger);
-      letter-spacing: 2px;
-      z-index: 10;
-    }
-
-    .rec-dot {
-      width: 7px; height: 7px;
-      border-radius: 50%;
-      background: var(--danger);
-      animation: pulse 1s infinite;
-    }
-
-    /* Floating toolbar */
-    .cam-toolbar {
-      position: absolute;
-      bottom: 18px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: flex;
-      gap: 10px;
-      background: rgba(8,12,16,0.85);
-      border: 1px solid var(--border2);
-      border-radius: 8px;
-      padding: 8px 16px;
-      z-index: 30;
-      backdrop-filter: blur(8px);
-    }
-
-    .cam-btn {
-      background: var(--panel);
-      border: 1px solid var(--border2);
-      color: var(--text);
-      padding: 7px 14px;
-      border-radius: 5px;
-      cursor: pointer;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(14,11,8,0.88);
+      border: 1px solid var(--amber);
+      border-radius: 2px;
+      padding: 12px 22px;
       font-family: var(--font-mono);
       font-size: 0.75rem;
-      letter-spacing: 1px;
-      transition: all 0.15s;
-      white-space: nowrap;
+      color: var(--amber-hi);
+      letter-spacing: 2px;
+      z-index: 25;
+      pointer-events: none;
+      text-align: center;
     }
 
-    .cam-btn:hover {
-      background: var(--border2);
-      border-color: var(--accent);
-      color: var(--accent);
+    /* HUD corners */
+    .hud-corner {
+      position: absolute;
+      width: 18px; height: 18px;
+      border-color: var(--amber-dim);
+      border-style: solid;
+      z-index: 5;
+      opacity: 0.5;
+    }
+    .hud-corner.tl { top:8px; left:8px;  border-width:1px 0 0 1px; }
+    .hud-corner.tr { top:8px; right:8px; border-width:1px 1px 0 0; }
+    .hud-corner.bl { bottom:8px; left:8px; border-width:0 0 1px 1px; }
+    .hud-corner.br { bottom:8px; right:8px; border-width:0 1px 1px 0; }
+
+    /* Alarm overlay */
+    .alarm-overlay {
+      display: none;
+      position: absolute;
+      inset: 0;
+      border: 3px solid var(--red-hi);
+      z-index: 40;
+      pointer-events: none;
+      animation: alarm-pulse 0.5s ease-in-out infinite alternate;
     }
 
-    .cam-btn.active {
-      background: rgba(0,212,255,0.12);
-      border-color: var(--accent);
-      color: var(--accent);
+    @keyframes alarm-pulse {
+      from { box-shadow: inset 0 0 40px rgba(196,58,26,0.2); border-color: var(--red); }
+      to   { box-shadow: inset 0 0 80px rgba(255,77,40,0.4); border-color: var(--red-hi); }
     }
 
-    .cam-btn.danger { border-color: rgba(255,58,58,0.4); color: var(--danger); }
-    .cam-btn.danger:hover { background: rgba(255,58,58,0.1); border-color: var(--danger); }
-    .cam-btn.danger.active { background: rgba(255,58,58,0.15); }
+    .alarm-label {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-family: var(--font-head);
+      font-size: 2.4rem;
+      letter-spacing: 8px;
+      color: var(--red-hi);
+      z-index: 41;
+      text-shadow: 0 0 30px rgba(255,77,40,0.8);
+      pointer-events: none;
+      animation: alarm-pulse 0.5s ease-in-out infinite alternate;
+    }
 
-    .cam-btn.success { color: var(--accent2); }
-    .cam-btn.success:hover,
-    .cam-btn.success.active { background: rgba(0,255,136,0.1); border-color: var(--accent2); }
-
-    /* ── SIDEBAR ── */
-    .sidebar {
+    /* ══ RIGHT PANEL ══ */
+    .right-panel {
+      background: var(--surface);
+      border-left: 1px solid var(--border);
       display: flex;
       flex-direction: column;
-      background: var(--surface);
       overflow-y: auto;
       overflow-x: hidden;
     }
 
-    .sidebar::-webkit-scrollbar { width: 4px; }
-    .sidebar::-webkit-scrollbar-track { background: var(--surface); }
-    .sidebar::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+    .right-panel::-webkit-scrollbar { width: 3px; }
+    .right-panel::-webkit-scrollbar-thumb { background: var(--border2); }
 
-    .sidebar-section {
-      padding: 16px 18px;
+    /* ══ FOOTER ══ */
+    footer {
+      grid-column: 1 / -1;
+      background: var(--surface);
+      border-top: 1px solid var(--border2);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 8px;
+      position: relative;
+    }
+
+    footer::before {
+      content: '';
+      position: absolute;
+      top: -2px; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border2), transparent);
+    }
+
+    .foot-btn {
+      padding: 6px 14px;
+      border: 1px solid var(--border2);
+      background: var(--panel);
+      color: var(--text-dim);
+      font-family: var(--font-ui);
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+
+    .foot-btn:hover {
+      border-color: var(--amber-dim);
+      color: var(--amber);
+      background: var(--amber-glow);
+    }
+
+    .foot-btn.on {
+      border-color: var(--amber);
+      color: var(--amber-hi);
+      background: var(--amber-glow);
+    }
+
+    .foot-btn.rec-btn {
+      border-color: var(--red);
+      color: var(--red-hi);
+    }
+
+    .foot-btn.rec-btn:hover,
+    .foot-btn.rec-btn.recording {
+      background: rgba(196,58,26,0.15);
+      border-color: var(--red-hi);
+    }
+
+    .foot-btn.snap-btn {
+      border-color: var(--green);
+      color: var(--green-hi);
+    }
+
+    .foot-btn.snap-btn:hover {
+      background: rgba(58,140,74,0.15);
+    }
+
+    .foot-sep {
+      width: 1px;
+      height: 20px;
+      background: var(--border);
+      flex-shrink: 0;
+    }
+
+    .foot-right {
+      margin-left: auto;
+      display: flex;
+      gap: 8px;
+    }
+
+    /* ══ SECTION ══ */
+    .section {
+      padding: 14px 16px;
       border-bottom: 1px solid var(--border);
     }
 
-    .section-label {
+    .section-title {
       font-family: var(--font-mono);
-      font-size: 0.65rem;
-      color: var(--text-dim);
-      letter-spacing: 2px;
+      font-size: 0.6rem;
+      font-weight: 500;
+      letter-spacing: 3px;
       text-transform: uppercase;
+      color: var(--amber-dim);
       margin-bottom: 12px;
       display: flex;
       align-items: center;
       gap: 8px;
     }
 
-    .section-label::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background: var(--border);
+    .section-title::before {
+      content: '//';
+      color: var(--text-faint);
     }
 
-    /* ── STAT GRID ── */
+    /* ══ STATS ══ */
     .stat-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 8px;
+      gap: 6px;
     }
 
-    .stat-card {
+    .stat-block {
       background: var(--panel);
       border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 12px 12px 10px;
+      border-radius: 2px;
+      padding: 10px 12px 8px;
     }
 
-    .stat-card .s-label {
+    .stat-block .sb-label {
       font-family: var(--font-mono);
-      font-size: 0.62rem;
+      font-size: 0.58rem;
       color: var(--text-dim);
-      letter-spacing: 1px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
       margin-bottom: 4px;
     }
 
-    .stat-card .s-value {
-      font-family: var(--font-mono);
-      font-size: 1.3rem;
-      font-weight: 700;
-      color: var(--accent);
+    .stat-block .sb-val {
+      font-family: var(--font-head);
+      font-size: 1.6rem;
       line-height: 1;
+      color: var(--amber);
+      letter-spacing: 2px;
     }
 
-    .stat-card .s-value.green { color: var(--accent2); }
-    .stat-card .s-value.warn  { color: var(--warn); }
-    .stat-card .s-value.red   { color: var(--danger); }
+    .stat-block .sb-val.green { color: var(--green-hi); }
+    .stat-block .sb-val.red   { color: var(--red-hi); }
+    .stat-block .sb-val.sm    { font-size: 1rem; padding-top: 4px; font-family: var(--font-mono); letter-spacing: 1px; }
 
-    /* ── TOGGLE ROWS ── */
-    .toggle-row {
+    /* ══ LEFT PANEL CONTENT ══ */
+    .left-section {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .left-title {
+      font-family: var(--font-mono);
+      font-size: 0.6rem;
+      font-weight: 500;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--amber-dim);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .left-title::before { content: '//'; color: var(--text-faint); }
+
+    /* ══ TOGGLES ══ */
+    .tog-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 9px 0;
+      padding: 8px 0;
       border-bottom: 1px solid var(--border);
+      font-family: var(--font-ui);
       font-size: 0.82rem;
-      color: var(--text);
+      font-weight: 500;
+      letter-spacing: 0.5px;
     }
 
-    .toggle-row:last-child { border-bottom: none; }
+    .tog-row:last-child { border-bottom: none; }
 
-    .toggle-row .t-label {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 0.82rem;
-    }
+    .tog-label { color: var(--text); display: flex; align-items: center; gap: 6px; }
+    .tog-label .tl-icon { font-size: 0.75rem; }
 
-    .toggle {
+    .tog {
       position: relative;
-      width: 36px;
-      height: 20px;
+      width: 32px;
+      height: 18px;
       flex-shrink: 0;
     }
 
-    .toggle input { opacity: 0; width: 0; height: 0; }
+    .tog input { opacity:0; width:0; height:0; }
 
-    .toggle-track {
+    .tog-track {
       position: absolute;
       inset: 0;
-      background: var(--border2);
-      border-radius: 20px;
+      background: var(--panel2);
+      border: 1px solid var(--border2);
+      border-radius: 1px;
       cursor: pointer;
-      transition: background 0.2s;
-    }
-
-    .toggle-track::before {
-      content: '';
-      position: absolute;
-      width: 14px; height: 14px;
-      left: 3px; top: 3px;
-      background: var(--muted);
-      border-radius: 50%;
       transition: all 0.2s;
     }
 
-    .toggle input:checked + .toggle-track { background: rgba(0,212,255,0.25); }
-    .toggle input:checked + .toggle-track::before {
-      transform: translateX(16px);
-      background: var(--accent);
+    .tog-track::before {
+      content: '';
+      position: absolute;
+      width: 12px; height: 12px;
+      left: 2px; top: 2px;
+      background: var(--text-faint);
+      border-radius: 1px;
+      transition: all 0.2s;
     }
 
-    /* ── DETECTION LOG ── */
+    .tog input:checked + .tog-track {
+      background: var(--amber-glow);
+      border-color: var(--amber-dim);
+    }
+
+    .tog input:checked + .tog-track::before {
+      transform: translateX(14px);
+      background: var(--amber);
+    }
+
+    /* ══ LOG ══ */
     .log-list {
-      max-height: 200px;
+      max-height: 180px;
       overflow-y: auto;
     }
 
-    .log-list::-webkit-scrollbar { width: 3px; }
+    .log-list::-webkit-scrollbar { width: 2px; }
     .log-list::-webkit-scrollbar-thumb { background: var(--border2); }
 
-    .log-entry {
+    .log-item {
       display: flex;
-      align-items: center;
+      align-items: baseline;
       gap: 8px;
-      padding: 6px 0;
+      padding: 5px 0;
       border-bottom: 1px solid var(--border);
       font-family: var(--font-mono);
-      font-size: 0.7rem;
+      font-size: 0.65rem;
       color: var(--text-dim);
-      animation: fadeIn 0.3s ease;
     }
 
-    .log-entry:last-child { border-bottom: none; }
-
-    .log-entry .le-time { color: var(--accent); min-width: 56px; }
-    .log-entry .le-icon { font-size: 0.9rem; }
-
-    @keyframes fadeIn { from { opacity:0; transform: translateX(8px); } to { opacity:1; transform: none; } }
-
+    .log-item:last-child { border-bottom: none; }
+    .log-item .li-time { color: var(--amber); flex-shrink: 0; }
+    .log-item .li-dot  { color: var(--amber-dim); }
     .log-empty {
       font-family: var(--font-mono);
-      font-size: 0.7rem;
-      color: var(--muted);
+      font-size: 0.65rem;
+      color: var(--text-faint);
       text-align: center;
-      padding: 16px 0;
+      padding: 18px 0;
+      letter-spacing: 1px;
     }
 
-    /* ── ALARM SELECTOR ── */
-    .alarm-select-wrap {
-      position: relative;
-    }
-
-    .alarm-select {
+    /* ══ ALARM SELECT ══ */
+    .alarm-sel {
       width: 100%;
       background: var(--panel);
       border: 1px solid var(--border2);
       color: var(--text);
-      padding: 8px 12px;
-      border-radius: 5px;
+      padding: 7px 10px;
+      border-radius: 2px;
       font-family: var(--font-mono);
-      font-size: 0.75rem;
-      appearance: none;
+      font-size: 0.7rem;
       cursor: pointer;
+      appearance: none;
       outline: none;
+      letter-spacing: 1px;
     }
 
-    .alarm-select:focus { border-color: var(--accent); }
+    .alarm-sel:focus { border-color: var(--amber-dim); }
 
-    /* ── MODAL (draw box) ── */
-    .draw-hint {
-      display: none;
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: rgba(8,12,16,0.85);
-      border: 1px solid var(--accent);
-      border-radius: 8px;
-      padding: 14px 22px;
+    /* ══ RECORDINGS LIST ══ */
+    .rec-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-height: 160px;
+      overflow-y: auto;
+    }
+
+    .rec-list::-webkit-scrollbar { width: 2px; }
+    .rec-list::-webkit-scrollbar-thumb { background: var(--border2); }
+
+    .rec-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 2px;
       font-family: var(--font-mono);
-      font-size: 0.8rem;
-      color: var(--accent);
+      font-size: 0.62rem;
+      color: var(--text-dim);
+    }
+
+    .rec-item .ri-name { flex: 1; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .rec-item .ri-size { color: var(--text-dim); flex-shrink: 0; }
+
+    .ri-btn {
+      background: none;
+      border: 1px solid var(--border2);
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+      font-size: 0.6rem;
+      padding: 2px 7px;
+      border-radius: 2px;
+      cursor: pointer;
       letter-spacing: 1px;
-      z-index: 25;
-      pointer-events: none;
+      flex-shrink: 0;
+      transition: all 0.15s;
+    }
+
+    .ri-btn.dl:hover  { color: var(--amber); border-color: var(--amber-dim); }
+    .ri-btn.del:hover { color: var(--red-hi); border-color: var(--red); }
+
+    .rec-empty {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--text-faint);
+      text-align: center;
+      padding: 14px 0;
+    }
+
+    /* ══ ZONE DRAW BTN ══ */
+    .zone-draw-btn {
+      display: block;
+      width: 100%;
+      padding: 8px 12px;
+      background: var(--panel);
+      border: 1px dashed var(--border2);
+      color: var(--text-dim);
+      font-family: var(--font-ui);
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: all 0.15s;
       text-align: center;
     }
 
-    /* ── ALARM FLASH ── */
-    .alarm-flash {
-      display: none;
-      position: fixed;
-      inset: 0;
-      border: 4px solid var(--danger);
-      z-index: 9000;
-      pointer-events: none;
-      animation: flashBorder 0.4s ease-in-out infinite alternate;
-    }
-
-    @keyframes flashBorder {
-      from { opacity: 0; }
-      to   { opacity: 1; }
-    }
-
-    /* Responsive */
-    @media (max-width: 900px) {
-      .dashboard { grid-template-columns: 1fr; grid-template-rows: 50vh auto; }
-      .sidebar   { max-height: 50vh; }
+    .zone-draw-btn:hover {
+      border-color: var(--amber-dim);
+      color: var(--amber);
+      background: var(--amber-glow);
     }
   </style>
 </head>
 <body>
 
-<header>
-  <div class="logo">
-    <div class="logo-dot"></div>
-    SECUREVIEW
-  </div>
-  <div class="header-meta">
-    <div class="stat-pill" id="conn-pill">
-      <div class="dot"></div>
-      <span id="conn-label">CONNECTING</span>
-    </div>
-    <div class="stat-pill">
-      <span id="header-time" style="color:var(--text)"></span>
-    </div>
-    <div class="stat-pill" id="res-pill">
-      <span>1280×720</span>
-    </div>
-  </div>
-</header>
+<div class="app">
 
-<div class="dashboard">
+  <!-- ══ HEADER ══ -->
+  <header>
+    <div class="logo">SECURE<span>VIEW</span></div>
+    <div class="header-divider"></div>
+    <div class="header-chips">
+      <div class="chip live" id="conn-chip">
+        <div class="chip-dot"></div>
+        <span id="conn-text">CONNECTING</span>
+      </div>
+      <div class="chip" id="alarm-chip" style="display:none">
+        <div class="chip-dot" style="background:var(--amber)"></div>
+        ARMED
+      </div>
+      <div class="chip recording-chip" id="rec-chip" style="display:none">
+        <div class="chip-dot"></div>
+        REC
+      </div>
+    </div>
+    <div id="header-clock"></div>
+  </header>
 
-  <!-- ── VIDEO ── -->
+  <!-- ══ LEFT PANEL ══ -->
+  <div class="left-panel">
+
+    <div class="left-section">
+      <div class="left-title">Controls</div>
+      <div class="tog-row">
+        <span class="tog-label"><span class="tl-icon">⬡</span> Alarm Zone</span>
+        <label class="tog"><input type="checkbox" id="tog-alarm" onchange="toggleAlarmBox()"><div class="tog-track"></div></label>
+      </div>
+      <div class="tog-row">
+        <span class="tog-label"><span class="tl-icon">◎</span> Motion Detect</span>
+        <label class="tog"><input type="checkbox" id="tog-motion" checked onchange="toggleMovement()"><div class="tog-track"></div></label>
+      </div>
+      <div class="tog-row">
+        <span class="tog-label"><span class="tl-icon">⬜</span> YOLO Boxes</span>
+        <label class="tog"><input type="checkbox" id="tog-boxes" checked onchange="toggleYoloBoxes()"><div class="tog-track"></div></label>
+      </div>
+      <div class="tog-row">
+        <span class="tog-label"><span class="tl-icon">⬚</span> Show Zone</span>
+        <label class="tog"><input type="checkbox" id="tog-zone" checked onchange="toggleZoneVis()"><div class="tog-track"></div></label>
+      </div>
+    </div>
+
+    <div class="left-section">
+      <div class="left-title">Watch Zone</div>
+      <button class="zone-draw-btn" onclick="startBoxDrawing()">⊕ Draw Zone</button>
+    </div>
+
+    <div class="left-section">
+      <div class="left-title">Alarm Sound</div>
+      <select class="alarm-sel" id="alarm-select" onchange="setAlarm(this.value)">
+        <option value="">— select —</option>
+      </select>
+    </div>
+
+    <div class="left-section" style="flex:1; overflow:hidden; display:flex; flex-direction:column;">
+      <div class="left-title">Detection Log</div>
+      <div class="log-list" id="log-list">
+        <div class="log-empty">NO EVENTS</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══ VIDEO ══ -->
   <div class="video-panel" id="video-panel">
-    <img id="stream" src="/video" alt="camera feed">
+    <img id="stream" src="/video" alt="feed">
     <canvas id="boxCanvas"></canvas>
 
-    <div class="cam-corner tl"></div>
-    <div class="cam-corner tr"></div>
-    <div class="cam-corner bl"></div>
-    <div class="cam-corner br"></div>
+    <div class="hud-corner tl"></div>
+    <div class="hud-corner tr"></div>
+    <div class="hud-corner bl"></div>
+    <div class="hud-corner br"></div>
 
-    <div class="rec-badge"><div class="rec-dot"></div>LIVE</div>
-
-    <div class="draw-hint" id="draw-hint">CLICK & DRAG TO SET WATCH ZONE</div>
-
-    <div class="cam-toolbar">
-      <button class="cam-btn" onclick="startBoxDrawing()" title="Draw watch zone">⬚ ZONE</button>
-      <button class="cam-btn danger" id="btn-alarm"  onclick="toggleAlarmBox()">🔔 ALARM OFF</button>
-      <button class="cam-btn"        id="btn-motion" onclick="toggleMovement()">👁 MOTION ON</button>
-      <button class="cam-btn"        id="btn-boxes"  onclick="toggleYoloBoxes()">📦 BOXES ON</button>
-      <button class="cam-btn"        id="btn-zone"   onclick="toggleAlarmBoxVisibility()">👁 ZONE ON</button>
-      <button class="cam-btn success" onclick="takeSnapshot()" title="Save snapshot">📷 SNAP</button>
-      <button class="cam-btn" onclick="toggleFullscreen()">⛶ FULL</button>
-    </div>
+    <div class="alarm-overlay" id="alarm-overlay"></div>
+    <div class="alarm-label" id="alarm-label">⚠ MOTION DETECTED</div>
+    <div class="draw-hint" id="draw-hint">CLICK & DRAG TO DEFINE WATCH ZONE</div>
   </div>
 
-  <!-- ── SIDEBAR ── -->
-  <aside class="sidebar">
+  <!-- ══ RIGHT PANEL ══ -->
+  <div class="right-panel">
 
-    <!-- STATS -->
-    <div class="sidebar-section">
-      <div class="section-label">Live Stats</div>
+    <div class="section">
+      <div class="section-title">Live Stats</div>
       <div class="stat-grid">
-        <div class="stat-card">
-          <div class="s-label">FPS</div>
-          <div class="s-value" id="stat-fps">—</div>
+        <div class="stat-block">
+          <div class="sb-label">FPS</div>
+          <div class="sb-val" id="stat-fps">—</div>
         </div>
-        <div class="stat-card">
-          <div class="s-label">DETECTIONS</div>
-          <div class="s-value green" id="stat-det">0</div>
+        <div class="stat-block">
+          <div class="sb-label">Detections</div>
+          <div class="sb-val green" id="stat-det">0</div>
         </div>
-        <div class="stat-card">
-          <div class="s-label">LAST TRIGGER</div>
-          <div class="s-value warn" id="stat-last" style="font-size:0.85rem;padding-top:4px">—</div>
+        <div class="stat-block">
+          <div class="sb-label">Last Trigger</div>
+          <div class="sb-val sm" id="stat-last">—</div>
         </div>
-        <div class="stat-card">
-          <div class="s-label">STATUS</div>
-          <div class="s-value" id="stat-status" style="font-size:0.8rem;padding-top:4px">—</div>
+        <div class="stat-block">
+          <div class="sb-label">Status</div>
+          <div class="sb-val sm" id="stat-status">STANDBY</div>
         </div>
       </div>
     </div>
 
-    <!-- CONTROLS -->
-    <div class="sidebar-section">
-      <div class="section-label">Controls</div>
-
-      <div class="toggle-row">
-        <span class="t-label">🔔 Alarm Active</span>
-        <label class="toggle">
-          <input type="checkbox" id="tog-alarm" onchange="toggleAlarmBox()">
-          <div class="toggle-track"></div>
-        </label>
+    <div class="section" style="flex:1; overflow:hidden; display:flex; flex-direction:column;">
+      <div class="section-title" style="justify-content:space-between">
+        <span>Recordings</span>
+        <button onclick="loadRecordings()" style="background:none;border:none;color:var(--amber-dim);font-family:var(--font-mono);font-size:0.6rem;cursor:pointer;letter-spacing:1px;">↺ REFRESH</button>
       </div>
-      <div class="toggle-row">
-        <span class="t-label">👁 Motion Detection</span>
-        <label class="toggle">
-          <input type="checkbox" id="tog-motion" checked onchange="toggleMovement()">
-          <div class="toggle-track"></div>
-        </label>
-      </div>
-      <div class="toggle-row">
-        <span class="t-label">📦 YOLO Boxes</span>
-        <label class="toggle">
-          <input type="checkbox" id="tog-boxes" checked onchange="toggleYoloBoxes()">
-          <div class="toggle-track"></div>
-        </label>
-      </div>
-      <div class="toggle-row">
-        <span class="t-label">⬚ Show Zone</span>
-        <label class="toggle">
-          <input type="checkbox" id="tog-zone" checked onchange="toggleAlarmBoxVisibility()">
-          <div class="toggle-track"></div>
-        </label>
+      <div class="rec-list" id="rec-list">
+        <div class="rec-empty">NO RECORDINGS</div>
       </div>
     </div>
 
-    <!-- ALARM SOUND -->
-    <div class="sidebar-section">
-      <div class="section-label">Alarm Sound</div>
-      <div class="alarm-select-wrap">
-        <select class="alarm-select" id="alarm-select" onchange="setAlarm(this.value)">
-          <option value="">— Select sound —</option>
-        </select>
-      </div>
-    </div>
+  </div>
 
-    <!-- DETECTION LOG -->
-    <div class="sidebar-section" style="flex:1">
-      <div class="section-label">Detection Log</div>
-      <div class="log-list" id="log-list">
-        <div class="log-empty">No detections yet</div>
-      </div>
+  <!-- ══ FOOTER ══ -->
+  <footer>
+    <button class="foot-btn" id="btn-alarm-foot" onclick="toggleAlarmBox()">Alarm Off</button>
+    <button class="foot-btn" id="btn-motion-foot" onclick="toggleMovement()">Motion On</button>
+    <button class="foot-btn" id="btn-boxes-foot" onclick="toggleYoloBoxes()">Boxes On</button>
+    <div class="foot-sep"></div>
+    <button class="foot-btn rec-btn" id="btn-rec" onclick="toggleRecording()">⏺ Record</button>
+    <div class="foot-right">
+      <button class="foot-btn snap-btn" onclick="takeSnapshot()">📷 Snapshot</button>
+      <button class="foot-btn" onclick="toggleFullscreen()">⛶ Fullscreen</button>
     </div>
+  </footer>
 
-  </aside>
 </div>
-
-<!-- Alarm flash border -->
-<div class="alarm-flash" id="alarm-flash"></div>
 
 <script>
 // ── Clock ──
-function updateClock() {
-  const now = new Date();
-  document.getElementById("header-time").textContent =
-    now.toLocaleTimeString("en-US", {hour12: false});
-}
-setInterval(updateClock, 1000);
-updateClock();
+(function clock() {
+  const el = document.getElementById("header-clock");
+  const tick = () => {
+    const d = new Date();
+    el.textContent = d.toLocaleDateString("en-US",{weekday:"short"}).toUpperCase()
+      + "  " + d.toLocaleTimeString("en-US",{hour12:false});
+  };
+  tick(); setInterval(tick, 1000);
+})();
 
-// ── Status polling ──
-let alarmEnabled  = false;
-let motionEnabled = true;
-let boxesEnabled  = true;
-let zoneVisible   = true;
+// ── State ──
+let isRecording = false;
 
+// ── Status poll ──
 async function pollStatus() {
   try {
     const r = await fetch("/status");
     const s = await r.json();
 
-    // Connection pill
-    const pill  = document.getElementById("conn-pill");
-    const label = document.getElementById("conn-label");
-    pill.className = "stat-pill " + (s.connected ? "online" : "");
-    label.textContent = s.connected ? "LIVE" : "OFFLINE";
+    // Connection chip
+    const chip  = document.getElementById("conn-chip");
+    const ctext = document.getElementById("conn-text");
+    chip.className = "chip " + (s.connected ? "live" : "offline");
+    ctext.textContent = s.connected ? "LIVE" : "OFFLINE";
+
+    // Alarm chip
+    document.getElementById("alarm-chip").style.display = s.alarm_box_enabled ? "flex" : "none";
+
+    // Rec chip
+    isRecording = s.recording;
+    document.getElementById("rec-chip").style.display = isRecording ? "flex" : "none";
+    const recBtn = document.getElementById("btn-rec");
+    recBtn.textContent = isRecording ? "⏹ Stop Rec" : "⏺ Record";
+    recBtn.className = "foot-btn rec-btn" + (isRecording ? " recording" : "");
 
     // Stats
-    document.getElementById("stat-fps").textContent  = s.fps;
-    document.getElementById("stat-det").textContent  = s.detections_today;
+    document.getElementById("stat-fps").textContent = s.fps;
+    document.getElementById("stat-det").textContent = s.detections_today;
     document.getElementById("stat-last").textContent = s.last_trigger || "—";
 
     const statusEl = document.getElementById("stat-status");
+    const overlay  = document.getElementById("alarm-overlay");
+    const alabel   = document.getElementById("alarm-label");
+
     if (s.alarm_active) {
       statusEl.textContent = "⚠ ALARM";
-      statusEl.className = "s-value red";
-      document.getElementById("alarm-flash").style.display = "block";
+      statusEl.className = "sb-val sm red";
+      overlay.style.display = "block";
+      alabel.style.display = "block";
     } else if (s.alarm_box_enabled) {
       statusEl.textContent = "ARMED";
-      statusEl.className = "s-value warn";
-      document.getElementById("alarm-flash").style.display = "none";
+      statusEl.className = "sb-val sm";
+      statusEl.style.color = "var(--amber)";
+      overlay.style.display = "none";
+      alabel.style.display = "none";
     } else {
       statusEl.textContent = "STANDBY";
-      statusEl.className = "s-value";
-      document.getElementById("alarm-flash").style.display = "none";
+      statusEl.className = "sb-val sm";
+      statusEl.style.color = "";
+      overlay.style.display = "none";
+      alabel.style.display = "none";
     }
 
-    // Sync toggle state (avoid loop)
-    alarmEnabled  = s.alarm_box_enabled;
-    motionEnabled = s.movement_detection_enabled;
-    boxesEnabled  = s.yolo_boxes_enabled;
-    zoneVisible   = s.show_alarm_box;
+    // Toggles
+    document.getElementById("tog-alarm").checked  = s.alarm_box_enabled;
+    document.getElementById("tog-motion").checked = s.movement_detection_enabled;
+    document.getElementById("tog-boxes").checked  = s.yolo_boxes_enabled;
+    document.getElementById("tog-zone").checked   = s.show_alarm_box;
 
-    document.getElementById("tog-alarm").checked  = alarmEnabled;
-    document.getElementById("tog-motion").checked = motionEnabled;
-    document.getElementById("tog-boxes").checked  = boxesEnabled;
-    document.getElementById("tog-zone").checked   = zoneVisible;
+    // Footer buttons
+    const ba = document.getElementById("btn-alarm-foot");
+    ba.textContent = s.alarm_box_enabled ? "Alarm On" : "Alarm Off";
+    ba.className = "foot-btn" + (s.alarm_box_enabled ? " on" : "");
 
-    // Toolbar button states
-    const ba = document.getElementById("btn-alarm");
-    ba.textContent = alarmEnabled ? "🔔 ALARM ON" : "🔔 ALARM OFF";
-    ba.className   = "cam-btn danger" + (alarmEnabled ? " active" : "");
+    const bm = document.getElementById("btn-motion-foot");
+    bm.textContent = s.movement_detection_enabled ? "Motion On" : "Motion Off";
+    bm.className = "foot-btn" + (s.movement_detection_enabled ? " on" : "");
 
-    document.getElementById("btn-motion").textContent = motionEnabled ? "👁 MOTION ON" : "👁 MOTION OFF";
-    document.getElementById("btn-boxes").textContent  = boxesEnabled  ? "📦 BOXES ON"  : "📦 BOXES OFF";
-    document.getElementById("btn-zone").textContent   = zoneVisible   ? "👁 ZONE ON"   : "👁 ZONE OFF";
+    const bb = document.getElementById("btn-boxes-foot");
+    bb.textContent = s.yolo_boxes_enabled ? "Boxes On" : "Boxes Off";
+    bb.className = "foot-btn" + (s.yolo_boxes_enabled ? " on" : "");
 
   } catch(e) {}
 }
@@ -677,61 +836,89 @@ async function pollLog() {
     const entries = await r.json();
     const list = document.getElementById("log-list");
     if (!entries.length) {
-      list.innerHTML = '<div class="log-empty">No detections yet</div>';
+      list.innerHTML = '<div class="log-empty">NO EVENTS</div>';
       return;
     }
     list.innerHTML = entries.slice(0, 20).map(e => `
-      <div class="log-entry">
-        <span class="le-icon">⚡</span>
-        <span class="le-time">${e.time}</span>
-        <span>${e.objects} ${e.type}</span>
+      <div class="log-item">
+        <span class="li-time">${e.time}</span>
+        <span class="li-dot">▸</span>
+        <span>${e.objects}x ${e.type}</span>
       </div>`).join("");
   } catch(e) {}
 }
-
 setInterval(pollLog, 3000);
+pollLog();
 
-// ── Load alarm sounds ──
+// ── Load alarms ──
 async function loadAlarms() {
   try {
     const r = await fetch("/list_alarms");
     const files = await r.json();
     const sel = document.getElementById("alarm-select");
     files.forEach(f => {
-      const opt = document.createElement("option");
-      opt.value = f; opt.textContent = f;
-      sel.appendChild(opt);
+      const o = document.createElement("option");
+      o.value = f; o.textContent = f;
+      sel.appendChild(o);
     });
   } catch(e) {}
 }
 loadAlarms();
 
-async function setAlarm(filename) {
-  if (!filename) return;
-  await fetch("/set_alarm", {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({filename})
-  });
+async function setAlarm(f) {
+  if (!f) return;
+  await fetch("/set_alarm", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({filename:f})});
 }
 
-// ── Toggles (just POST, state synced by pollStatus) ──
-async function toggleAlarmBox() {
-  await fetch("/toggle_alarm_box", {method:"POST"});
-  setTimeout(pollStatus, 200);
+// ── Toggles ──
+async function post(url) { await fetch(url, {method:"POST"}); setTimeout(pollStatus, 200); }
+
+function toggleAlarmBox()   { post("/toggle_alarm_box"); }
+function toggleMovement()   { post("/toggle_movement_detection"); }
+function toggleYoloBoxes()  { post("/toggle_yolo_boxes"); }
+function toggleZoneVis()    { post("/toggle_box_visibility"); }
+
+// ── Recording ──
+async function toggleRecording() {
+  if (isRecording) {
+    await fetch("/stop_recording", {method:"POST"});
+  } else {
+    await fetch("/start_recording", {method:"POST"});
+  }
+  setTimeout(pollStatus, 300);
+  setTimeout(loadRecordings, 1500);
 }
-async function toggleMovement() {
-  await fetch("/toggle_movement_detection", {method:"POST"});
-  setTimeout(pollStatus, 200);
+
+// ── Recordings list ──
+async function loadRecordings() {
+  try {
+    const r = await fetch("/list_recordings");
+    const files = await r.json();
+    const list = document.getElementById("rec-list");
+    if (!files.length) {
+      list.innerHTML = '<div class="rec-empty">NO RECORDINGS</div>';
+      return;
+    }
+    list.innerHTML = files.map(f => `
+      <div class="rec-item">
+        <span class="ri-name" title="${f.file}">${f.file.replace("rec_","").replace(".mp4","")}</span>
+        <span class="ri-size">${f.size_mb}MB</span>
+        <a href="/download_recording/${f.file}" download>
+          <button class="ri-btn dl">DL</button>
+        </a>
+        <button class="ri-btn del" onclick="deleteRec('${f.file}')">DEL</button>
+      </div>`).join("");
+  } catch(e) {}
 }
-async function toggleYoloBoxes() {
-  await fetch("/toggle_yolo_boxes", {method:"POST"});
-  setTimeout(pollStatus, 200);
+
+async function deleteRec(filename) {
+  if (!confirm(`Delete ${filename}?`)) return;
+  await fetch(`/delete_recording/${filename}`, {method:"DELETE"});
+  loadRecordings();
 }
-async function toggleAlarmBoxVisibility() {
-  await fetch("/toggle_box_visibility", {method:"POST"});
-  setTimeout(pollStatus, 200);
-}
+
+loadRecordings();
+setInterval(loadRecordings, 30000);
 
 // ── Snapshot ──
 function takeSnapshot() {
@@ -748,115 +935,86 @@ function toggleFullscreen() {
 }
 
 // ── Box drawing ──
-let drawing  = false;
-let boxStart = null;
-let boxEnd   = null;
-const boxCanvas = document.getElementById("boxCanvas");
-const boxCtx    = boxCanvas.getContext("2d");
+let drawing = false, boxStart = null, boxEnd = null;
+const canvas = document.getElementById("boxCanvas");
+const ctx    = canvas.getContext("2d");
 
 function resizeCanvas() {
-  const vid = document.getElementById("stream");
-  boxCanvas.width  = vid.clientWidth;
-  boxCanvas.height = vid.clientHeight;
+  const v = document.getElementById("stream");
+  canvas.width  = v.clientWidth;
+  canvas.height = v.clientHeight;
 }
 window.addEventListener("resize", resizeCanvas);
-window.addEventListener("load", resizeCanvas);
 setTimeout(resizeCanvas, 500);
 
 function startBoxDrawing() {
   resizeCanvas();
-  boxCanvas.style.display = "block";
+  canvas.style.display = "block";
   document.getElementById("draw-hint").style.display = "block";
-  drawing  = true;
-  boxStart = null;
-  boxEnd   = null;
-  boxCtx.clearRect(0, 0, boxCanvas.width, boxCanvas.height);
+  drawing = true; boxStart = null; boxEnd = null;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
-boxCanvas.addEventListener("mousedown", e => {
+canvas.addEventListener("mousedown", e => {
   if (!drawing) return;
-  const r = boxCanvas.getBoundingClientRect();
+  const r = canvas.getBoundingClientRect();
   boxStart = {x: e.clientX - r.left, y: e.clientY - r.top};
   document.getElementById("draw-hint").style.display = "none";
 });
 
-boxCanvas.addEventListener("mousemove", e => {
+canvas.addEventListener("mousemove", e => {
   if (!drawing || !boxStart) return;
-  const r = boxCanvas.getBoundingClientRect();
+  const r = canvas.getBoundingClientRect();
   boxEnd = {x: e.clientX - r.left, y: e.clientY - r.top};
-  boxCtx.clearRect(0, 0, boxCanvas.width, boxCanvas.height);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   const x = Math.min(boxStart.x, boxEnd.x);
   const y = Math.min(boxStart.y, boxEnd.y);
   const w = Math.abs(boxEnd.x - boxStart.x);
   const h = Math.abs(boxEnd.y - boxStart.y);
 
-  // Fill
-  boxCtx.fillStyle = "rgba(0,212,255,0.05)";
-  boxCtx.fillRect(x, y, w, h);
+  ctx.fillStyle = "rgba(224,140,0,0.06)";
+  ctx.fillRect(x, y, w, h);
 
-  // Dashed border
-  boxCtx.strokeStyle = "#00d4ff";
-  boxCtx.lineWidth   = 1.5;
-  boxCtx.setLineDash([6, 4]);
-  boxCtx.strokeRect(x, y, w, h);
+  ctx.strokeStyle = "#e08c00";
+  ctx.lineWidth = 1;
+  ctx.setLineDash([5, 4]);
+  ctx.strokeRect(x, y, w, h);
 
-  // Corner dots
-  boxCtx.setLineDash([]);
-  boxCtx.fillStyle = "#00d4ff";
+  ctx.setLineDash([]);
+  ctx.fillStyle = "#ffad00";
   [[x,y],[x+w,y],[x,y+h],[x+w,y+h]].forEach(([cx,cy]) => {
-    boxCtx.beginPath();
-    boxCtx.arc(cx, cy, 4, 0, Math.PI*2);
-    boxCtx.fill();
+    ctx.beginPath();
+    ctx.rect(cx-3, cy-3, 6, 6);
+    ctx.fill();
   });
 
-  // Label
-  boxCtx.fillStyle = "rgba(0,0,0,0.6)";
-  boxCtx.fillRect(x, y - 22, 90, 20);
-  boxCtx.fillStyle = "#00d4ff";
-  boxCtx.font = "11px 'Share Tech Mono',monospace";
-  boxCtx.fillText("WATCH ZONE", x + 4, y - 7);
+  ctx.fillStyle = "rgba(14,11,8,0.75)";
+  ctx.fillRect(x, y - 20, 88, 18);
+  ctx.fillStyle = "#e08c00";
+  ctx.font = "10px 'IBM Plex Mono',monospace";
+  ctx.fillText("WATCH ZONE", x + 4, y - 6);
 });
 
-boxCanvas.addEventListener("mouseup", async e => {
+canvas.addEventListener("mouseup", async e => {
   if (!drawing || !boxStart || !boxEnd) return;
   const x1 = Math.min(boxStart.x, boxEnd.x);
   const y1 = Math.min(boxStart.y, boxEnd.y);
   const x2 = Math.max(boxStart.x, boxEnd.x);
   const y2 = Math.max(boxStart.y, boxEnd.y);
-
   await fetch("/save_box", {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({box_norm:[
-      x1/boxCanvas.width, y1/boxCanvas.height,
-      x2/boxCanvas.width, y2/boxCanvas.height
-    ]})
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({box_norm:[x1/canvas.width, y1/canvas.height, x2/canvas.width, y2/canvas.height]})
   });
-
-  boxCanvas.style.display = "none";
+  canvas.style.display = "none";
   drawing = false;
 });
 
-// Touch support for mobile
-boxCanvas.addEventListener("touchstart", e => {
-  e.preventDefault();
-  const t = e.touches[0];
-  const r = boxCanvas.getBoundingClientRect();
-  const me = new MouseEvent("mousedown",{clientX:t.clientX,clientY:t.clientY});
-  boxCanvas.dispatchEvent(me);
-});
-boxCanvas.addEventListener("touchmove", e => {
-  e.preventDefault();
-  const t = e.touches[0];
-  const me = new MouseEvent("mousemove",{clientX:t.clientX,clientY:t.clientY});
-  boxCanvas.dispatchEvent(me);
-});
-boxCanvas.addEventListener("touchend", e => {
-  e.preventDefault();
-  const me = new MouseEvent("mouseup",{});
-  boxCanvas.dispatchEvent(me);
-});
+// Touch
+canvas.addEventListener("touchstart", e => { e.preventDefault(); const t = e.touches[0]; canvas.dispatchEvent(new MouseEvent("mousedown",{clientX:t.clientX,clientY:t.clientY})); });
+canvas.addEventListener("touchmove",  e => { e.preventDefault(); const t = e.touches[0]; canvas.dispatchEvent(new MouseEvent("mousemove",{clientX:t.clientX,clientY:t.clientY})); });
+canvas.addEventListener("touchend",   e => { e.preventDefault(); canvas.dispatchEvent(new MouseEvent("mouseup",{})); });
 </script>
 </body>
 </html>
