@@ -55,14 +55,57 @@ stats = {
     "last_trigger": None,
     "alarm_active": False,
     "connected": False,
+    "recording": False,
+    "recording_file": None,
 }
 
-ALARM_FOLDER    = os.path.join(os.path.dirname(os.path.abspath(__file__)), "alarms")
-SNAPSHOT_FOLDER = os.path.join(os.path.dirname(__file__), "snapshots")
+ALARM_FOLDER      = os.path.join(os.path.dirname(os.path.abspath(__file__)), "alarms")
+SNAPSHOT_FOLDER   = os.path.join(os.path.dirname(__file__), "snapshots")
+RECORDING_FOLDER  = os.path.join(os.path.dirname(__file__), "recordings")
 os.makedirs(ALARM_FOLDER, exist_ok=True)
 os.makedirs(SNAPSHOT_FOLDER, exist_ok=True)
+os.makedirs(RECORDING_FOLDER, exist_ok=True)
 
 model = YOLO("yolov8n.pt")
+
+# ============================
+#   RECORDING
+# ============================
+video_writer       = None
+video_writer_lock  = threading.Lock()
+recording_fps      = 20  # target FPS for the output file
+
+def start_recording():
+    global video_writer
+    with video_writer_lock:
+        if video_writer is not None:
+            return {"status": "already_recording", "file": stats["recording_file"]}
+        ts       = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"rec_{ts}.mp4"
+        filepath = os.path.join(RECORDING_FOLDER, filename)
+        fourcc   = cv2.VideoWriter_fourcc(*"mp4v")
+        video_writer = cv2.VideoWriter(filepath, fourcc, recording_fps, (FRAME_W, FRAME_H))
+        stats["recording"]      = True
+        stats["recording_file"] = filename
+        return {"status": "started", "file": filename}
+
+def stop_recording():
+    global video_writer
+    with video_writer_lock:
+        if video_writer is None:
+            return {"status": "not_recording"}
+        video_writer.release()
+        video_writer = None
+        fname = stats["recording_file"]
+        stats["recording"]      = False
+        stats["recording_file"] = None
+        return {"status": "stopped", "file": fname}
+
+def write_frame_to_recording(frame):
+    """Called from generate_frames() for every rendered frame."""
+    with video_writer_lock:
+        if video_writer is not None:
+            video_writer.write(frame)
 
 # ============================
 #   CAMERA THREAD
@@ -167,12 +210,10 @@ def generate_frames():
                     draw_box(frame, x1, y1, x2, y2, f"{name} {conf:.0%}", color)
                 if name not in ["person", "car"]:
                     continue
-                # Trigger if the detected box overlaps the zone at all (not just fully inside)
                 if not (x1 < bx2 and x2 > bx1 and y1 < by2 and y2 > by1):
                     continue
                 current_centers.append(((x1+x2)//2, (y1+y2)//2))
 
-            # Trigger only if a person/car inside the box has MOVED since last frame
             moved = (
                 len(current_centers) > 0 and
                 len(prev_person_centers) > 0 and
@@ -194,7 +235,7 @@ def generate_frames():
         else:
             prev_person_centers = []
 
-        # Alarm box
+        # Alarm box overlay
         if alarm_box is not None and show_alarm_box:
             bx1,by1,bx2,by2 = alarm_box
             cv2.rectangle(frame,(bx1,by1),(bx2,by2),(0,60,255),1)
@@ -211,6 +252,12 @@ def generate_frames():
         cv2.rectangle(frame,(0,0),(80,24),(0,0,0),-1)
         cv2.putText(frame,f"{stats['fps']} FPS",(6,17),cv2.FONT_HERSHEY_SIMPLEX,0.52,(0,200,255),1,cv2.LINE_AA)
 
+        # Recording indicator (red dot + "REC")
+        if stats["recording"]:
+            cv2.circle(frame, (FRAME_W - 24, 14), 7, (0, 0, 220), -1)
+            cv2.putText(frame, "REC", (FRAME_W - 60, 20),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 0, 220), 1, cv2.LINE_AA)
+
         # Alarm flash
         if stats["alarm_active"]:
             ov = frame.copy()
@@ -220,6 +267,9 @@ def generate_frames():
 
         with frame_lock:
             latest_annotated = frame.copy()
+
+        # Write to recording file if active (annotated frame, same as stream)
+        write_frame_to_recording(frame)
 
         yield b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + jpeg.encode(frame, quality=JPEG_QUALITY) + b"\r\n"
 
@@ -306,6 +356,49 @@ def toggle_movement_detection():
     global movement_detection_enabled
     movement_detection_enabled = not movement_detection_enabled
     return jsonify({"enabled":movement_detection_enabled})
+
+# ============================
+#   RECORDING ROUTES
+# ============================
+@app.route("/start_recording", methods=["POST"])
+def api_start_recording():
+    return jsonify(start_recording())
+
+@app.route("/stop_recording", methods=["POST"])
+def api_stop_recording():
+    return jsonify(stop_recording())
+
+@app.route("/list_recordings")
+def list_recordings():
+    files = sorted(
+        [f for f in os.listdir(RECORDING_FOLDER) if f.endswith(".mp4")],
+        reverse=True
+    )
+    result = []
+    for f in files:
+        path = os.path.join(RECORDING_FOLDER, f)
+        size_mb = round(os.path.getsize(path) / (1024 * 1024), 2)
+        result.append({"file": f, "size_mb": size_mb})
+    return jsonify(result)
+
+@app.route("/download_recording/<filename>")
+def download_recording(filename):
+    filepath = os.path.join(RECORDING_FOLDER, filename)
+    if not os.path.exists(filepath):
+        return "Not found", 404
+    return send_file(filepath, mimetype="video/mp4",
+                     as_attachment=True, download_name=filename)
+
+@app.route("/delete_recording/<filename>", methods=["DELETE"])
+def delete_recording(filename):
+    filepath = os.path.join(RECORDING_FOLDER, filename)
+    if not os.path.exists(filepath):
+        return jsonify({"status": "not_found"}), 404
+    # Don't allow deleting the currently active recording
+    if filename == stats.get("recording_file"):
+        return jsonify({"status": "error", "msg": "Cannot delete an active recording"}), 400
+    os.remove(filepath)
+    return jsonify({"status": "deleted", "file": filename})
 
 if __name__ == "__main__":
     print("=== SERVER STARTING ===")
