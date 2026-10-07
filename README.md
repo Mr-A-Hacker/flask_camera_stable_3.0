@@ -1,3 +1,10 @@
+> ## 👋 Start Here
+> A camera web-application project. **For users:** explore how a browser interface can work with a camera source in a local deployment.
+>
+> **Safety & privacy:** Use security, network, camera, and data-collection features only with appropriate authorization and consent.
+
+---
+
 # 🎥 SecureView — AI-Powered Security Camera Dashboard
 
 A self-hosted, browser-based security camera system powered by **YOLOv8** object detection. Streams live RTSP footage, detects motion in user-defined watch zones, triggers audio alarms, records video, and serves a real-time dashboard — all from a single Python file.
