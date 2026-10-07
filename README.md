@@ -1,5 +1,10 @@
 > ## 👋 Start Here
 > A camera web-application project. **For users:** explore how a browser interface can work with a camera source in a local deployment.
+
+---
+
+> ## 👋 Start Here
+> A camera web-application project. **For users:** explore how a browser interface can work with a camera source in a local deployment.
 >
 > **Safety & privacy:** Use security, network, camera, and data-collection features only with appropriate authorization and consent.
 
